@@ -139,6 +139,15 @@ REGLAS ESTRICTAS PARA LSM:
     }
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`🚀 Servidor Backend corriendo en http://localhost:${PORT}`);
+});
+
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`❌ El puerto ${PORT} está ocupado por otro proceso.`);
+        console.error(`👉 Cambia el PORT en tu archivo .env o cierra la aplicación que lo usa.`);
+    } else {
+        console.error('Error en el servidor:', err);
+    }
 });
