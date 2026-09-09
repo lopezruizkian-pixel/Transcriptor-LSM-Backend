@@ -3,17 +3,32 @@
   "version": "1.0.0",
   "description": "Backend API para el Transcriptor LSM (Whisper + OpenAI)",
   "type": "module",
-  "main": "server.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc"
   },
-  "keywords": ["lsm", "whisper", "openai", "transcription", "express"],
+  "keywords": [
+    "lsm",
+    "whisper",
+    "openai",
+    "transcription",
+    "express"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.20.2",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
   }
 }
