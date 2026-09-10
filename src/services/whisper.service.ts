@@ -1,4 +1,4 @@
-// Frases de alucinación conocidas de Whisper (entrenado con subtítulos de YouTube/Amara y fragmentos de prompt)
+// Frases de alucinación de subtítulos de YouTube/Amara
 const WHISPER_HALLUCINATIONS = [
     'suscríbete', 'suscribete', 'subscribe', 'amara.org', 'amara',
     'gracias por ver', 'thanks for watching', 'like y suscríbete',
@@ -6,9 +6,7 @@ const WHISPER_HALLUCINATIONS = [
     'subtitles by', 'traducido por', 'translated by', 'no olvides suscribirte',
     "don't forget to subscribe", 'da like', 'darle like', 'próximo video',
     'siguiente video', 'hasta la próxima', 'nos vemos en el próximo',
-    'puedes activar', 'la campanita',
-    'maestro explica', 'tema académico', 'tema academico', 'tema específico', 'tema especifico',
-    'clase escolar'
+    'puedes activar', 'la campanita'
 ];
 
 const isHallucination = (text: string): boolean => {
@@ -36,12 +34,10 @@ export const transcribeAudio = async (audioBase64: string, language?: string, ex
     formData.append('model', model);
     formData.append('language', language || 'es');
     
-    // Prompt de vocabulario: orienta a Whisper sin introducir frases descriptivas que alucine en silencio
-    let promptText = 'Transcripción de clase escolar en español y vocabulario académico.';
+    // Si el profesor especificó un tema de la clase, se incluye de forma directa y limpia sin oraciones descriptivas
     if (topicContext) {
-        promptText = `Vocabulario de la clase: ${topicContext}. Transcripción en español.`;
+        formData.append('prompt', `Vocabulario clave: ${topicContext}`);
     }
-    formData.append('prompt', promptText);
 
     const response = await fetch(apiUrl, {
         method: 'POST',
@@ -56,7 +52,7 @@ export const transcribeAudio = async (audioBase64: string, language?: string, ex
 
     const data = await response.json();
 
-    // Filtrar alucinaciones antes de retornar
+    // Filtrar alucinaciones de YouTube/Amara antes de retornar
     if (data.text && isHallucination(data.text)) {
         console.warn(`⚠️  Alucinación de Whisper filtrada: "${data.text}"`);
         return { ...data, text: '' };
