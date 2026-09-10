@@ -1,4 +1,4 @@
-// Frases de alucinación conocidas de Whisper (entrenado con subtítulos de YouTube/Amara)
+// Frases de alucinación conocidas de Whisper (entrenado con subtítulos de YouTube/Amara y fragmentos de prompt)
 const WHISPER_HALLUCINATIONS = [
     'suscríbete', 'suscribete', 'subscribe', 'amara.org', 'amara',
     'gracias por ver', 'thanks for watching', 'like y suscríbete',
@@ -7,6 +7,8 @@ const WHISPER_HALLUCINATIONS = [
     "don't forget to subscribe", 'da like', 'darle like', 'próximo video',
     'siguiente video', 'hasta la próxima', 'nos vemos en el próximo',
     'puedes activar', 'la campanita',
+    'maestro explica', 'tema académico', 'tema academico', 'tema específico', 'tema especifico',
+    'clase escolar'
 ];
 
 const isHallucination = (text: string): boolean => {
@@ -34,10 +36,10 @@ export const transcribeAudio = async (audioBase64: string, language?: string, ex
     formData.append('model', model);
     formData.append('language', language || 'es');
     
-    // Prompt de contexto: reduce alucinaciones y orienta a Whisper al vocabulario escolar
-    let promptText = 'Clase escolar. El maestro explica un tema académico en español.';
+    // Prompt de vocabulario: orienta a Whisper sin introducir frases descriptivas que alucine en silencio
+    let promptText = 'Transcripción de clase escolar en español y vocabulario académico.';
     if (topicContext) {
-        promptText += ` Tema específico: ${topicContext}`;
+        promptText = `Vocabulario de la clase: ${topicContext}. Transcripción en español.`;
     }
     formData.append('prompt', promptText);
 
