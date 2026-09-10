@@ -33,8 +33,9 @@ export const transcribeAudio = async (audioBase64: string, language?: string, ex
 
     formData.append('model', model);
     formData.append('language', language || 'es');
+    formData.append('temperature', '0');
+    formData.append('response_format', 'verbose_json');
     
-    // Si el profesor especificó un tema de la clase, se incluye de forma directa y limpia sin oraciones descriptivas
     if (topicContext) {
         formData.append('prompt', `Vocabulario clave: ${topicContext}`);
     }
@@ -52,11 +53,34 @@ export const transcribeAudio = async (audioBase64: string, language?: string, ex
 
     const data = await response.json();
 
-    // Filtrar alucinaciones de YouTube/Amara antes de retornar
-    if (data.text && isHallucination(data.text)) {
-        console.warn(`⚠️  Alucinación de Whisper filtrada: "${data.text}"`);
+    // Filtrar silencios, ruidos y alucinaciones en el backend usando las métricas de verbose_json
+    if (data.segments && Array.isArray(data.segments) && data.segments.length > 0) {
+        const validSegments = data.segments.filter((seg: any) => {
+            const isSilence = seg.no_speech_prob > 0.4;
+            const isLowConfidence = seg.avg_logprob < -1.2;
+            const isRepetitiveLoop = seg.compression_ratio > 2.4;
+
+            if (isSilence || isLowConfidence || isRepetitiveLoop) {
+                console.log(`🔇 Segmento descartado por ruido/silencio (no_speech_prob: ${seg.no_speech_prob?.toFixed(2)}, logprob: ${seg.avg_logprob?.toFixed(2)}, comp_ratio: ${seg.compression_ratio?.toFixed(2)}): "${seg.text}"`);
+                return false;
+            }
+            return true;
+        });
+
+        const cleanText = validSegments.map((seg: any) => seg.text).join(' ').trim();
+        
+        if (cleanText && isHallucination(cleanText)) {
+            console.warn(`⚠️ Alucinación de YouTube filtrada: "${cleanText}"`);
+            return { ...data, text: '' };
+        }
+
+        return { ...data, text: cleanText };
+    }
+
+    const rawText = data.text?.trim() || '';
+    if (rawText && isHallucination(rawText)) {
         return { ...data, text: '' };
     }
 
-    return data;
+    return { ...data, text: rawText };
 };
