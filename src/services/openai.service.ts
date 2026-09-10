@@ -1,35 +1,41 @@
-export const processLSM = async (text: string, lang: string): Promise<any> => {
-    if (!text) {
-        throw new Error('No text provided');
-    }
+export const processLSM = async (text: string, lang: string, context?: string): Promise<any> => {
+    if (!text) throw new Error('No text provided');
 
-    let systemPrompt = "";
+    // Si hay contexto previo, incluirlo en el prompt
+    const contextSection = context?.trim()
+        ? `\n\nCONTEXTO PREVIO (fragmentos anteriores del mismo maestro, en orden):\n"${context}"\n\nSi el texto actual parece incompleto o continúa una idea del contexto, combínalos para entender el significado completo antes de traducir.`
+        : '';
+
+    const mathInstructions = `
+- Si detectas expresiones matemáticas, convierte a símbolos Unicode directamente:
+  "raíz de" o "raíz cuadrada de" → √
+  "elevado al cuadrado" o "al cuadrado" → ²
+  "elevado al cubo" o "al cubo" → ³
+  "pi" → π | "infinito" → ∞ | "sumatoria" → Σ | "más o menos" → ±
+  "integral" → ∫ | "delta" → Δ | "theta" → θ | "alfa" → α | "beta" → β
+  Ejemplo: "raíz de cinco más x al cuadrado" → √5 + x²`;
+
+    const lsmRules = `
+REGLAS ESTRICTAS PARA LSM:
+- Identifica el tema principal y el sentido exacto. Si el fragmento parece incompleto, usa el CONTEXTO PREVIO para completarlo.
+- Adapta a estructura gramatical LSM: Tiempo → Lugar → Sujeto → Objeto → Verbo.
+- Elimina artículos (el, la, los, un, una) y conectores innecesarios.
+- Escribe TODO en minúsculas, EXCEPTO símbolos matemáticos (√ π Σ etc.).
+- NO uses etiquetas como "Tiempo:" o "Lugar:". Solo la frase limpia.${mathInstructions}`;
+
+    let systemPrompt = '';
 
     if (lang === 'en') {
-        systemPrompt = `Recibirás texto transcrito por Whisper. Devuelve un JSON con dos claves:
-
-1. "traduccion": Traducción fiel al español.
-2. "lsm": Adaptación a Lengua de Señas Mexicana (LSM) simplificada.
-
-REGLAS ESTRICTAS PARA LSM:
-- Identifica el tema principal y el sentido exacto de lo que quiere decir el maestro.
-- Extrae e interpreta modismos o expresiones complejas, reescribiéndolos con palabras más sencillas.
-- Adapta la oración a la estructura gramatical LSM: Tiempo → Lugar → Sujeto → Objeto → Verbo.
-- Elimina artículos (el, la, los, un, una) y conectores innecesarios.
-- Escribe TODO en minúsculas.
-- NO utilices etiquetas como "Tiempo:", "Lugar:", etc. Solo la frase limpia.`;
+        systemPrompt = `Recibirás texto en inglés transcrito por Whisper.${contextSection}
+Devuelve un JSON con dos claves:
+1. "traduccion": traducción fiel al español.
+2. "lsm": adaptación a Lengua de Señas Mexicana simplificada.
+${lsmRules}`;
     } else {
-        systemPrompt = `Recibirás texto transcrito por Whisper en español. Devuelve un JSON con una sola clave:
-
-1. "lsm": Adaptación a Lengua de Señas Mexicana (LSM) simplificada.
-
-REGLAS ESTRICTAS PARA LSM:
-- Identifica el tema principal y el sentido exacto de lo que quiere decir el maestro.
-- Extrae e interpreta modismos o expresiones complejas, reescribiéndolos con palabras más sencillas.
-- Adapta la oración a la estructura gramatical LSM: Tiempo → Lugar → Sujeto → Objeto → Verbo.
-- Elimina artículos (el, la, los, un, una) y conectores innecesarios.
-- Escribe TODO en minúsculas.
-- NO utilices etiquetas como "Tiempo:", "Lugar:", etc. Solo la frase limpia.`;
+        systemPrompt = `Recibirás texto en español transcrito por Whisper.${contextSection}
+Devuelve un JSON con una sola clave:
+1. "lsm": adaptación a Lengua de Señas Mexicana simplificada.
+${lsmRules}`;
     }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
