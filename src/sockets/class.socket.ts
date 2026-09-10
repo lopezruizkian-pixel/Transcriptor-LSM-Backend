@@ -1,4 +1,5 @@
 import { Server, Socket } from 'socket.io';
+import { classStore } from '../mocks/class.store.js';
 
 export default (io: Server) => {
     io.on('connection', (socket: Socket) => {
@@ -6,18 +7,25 @@ export default (io: Server) => {
 
         // Evento para unirse a una clase específica
         socket.on('join_class', ({ classId, role }: { classId: string, role: string }) => {
-            // classId: identificador único de la clase (ej. 'clase-101')
-            // role: 'maestro' o 'alumno'
             socket.join(classId);
             console.log(`Usuario ${socket.id} (${role}) se unió a la clase: ${classId}`);
             
-            // Opcional: Notificar a la sala que alguien se unió
+            // Enviar transcripción acumulada existente si entra un alumno a media clase
+            if (role === 'alumno' && classStore[classId]) {
+                const { fullTranscription, fullLsm } = classStore[classId];
+                if (fullTranscription || fullLsm) {
+                    socket.emit('receive_transcription', {
+                        fullTranscription,
+                        fullLsm
+                    });
+                }
+            }
+
             socket.to(classId).emit('user_joined', { userId: socket.id, role });
         });
 
         // Evento emitido por el profesor con los datos de transcripción/LSM
         socket.on('send_transcription', ({ classId, data }: { classId: string, data: any }) => {
-            // Reenvía los datos a todos los clientes conectados a esa clase (excepto el emisor)
             socket.to(classId).emit('receive_transcription', data);
         });
 
