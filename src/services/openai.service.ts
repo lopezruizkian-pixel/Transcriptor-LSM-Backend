@@ -38,14 +38,14 @@ Devuelve un JSON con una sola clave:
 ${lsmRules}`;
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
         },
         body: JSON.stringify({
-            model: "gpt-4o-mini",
+            model: "qwen/qwen3.8-27b",
             response_format: { type: "json_object" },
             messages: [
                 { role: "system", content: systemPrompt },
@@ -62,4 +62,42 @@ ${lsmRules}`;
 
     const data = await response.json();
     return JSON.parse(data.choices[0].message.content);
+};
+
+export const generateSummary = async (fullTranscription: string, topicContext: string): Promise<string> => {
+    if (!fullTranscription) return '';
+
+    const systemPrompt = `Eres un asistente educativo experto. Tu objetivo es generar un resumen académico estructurado de una clase, basado en su transcripción.
+El contexto o tema principal de la clase es: "${topicContext}".
+
+REGLAS ESTRICTAS:
+1. Filtra y omite TODO el "ruido": conversaciones triviales, saludos, interrupciones, pláticas con alumnos que no tengan que ver con el tema, o anécdotas irrelevantes.
+2. Enfócate ÚNICAMENTE en el conocimiento académico relacionado al contexto de la clase.
+3. Estructura el resumen en viñetas o párrafos cortos y claros, usando Markdown.
+4. Si la transcripción está casi vacía o no hay contenido académico real, responde con un breve texto indicando que no hubo suficiente contenido relevante.`;
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+        },
+        body: JSON.stringify({
+            model: "qwen/qwen3.8-27b",
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: fullTranscription }
+            ],
+            temperature: 0.3
+        })
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error("DeepSeek Summary Error:", error);
+        throw new Error(error.error?.message || `Error HTTP ${response.status} en la API de DeepSeek (Resumen)`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
 };
