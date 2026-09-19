@@ -25,7 +25,7 @@ export const getDefinition = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
-        let cleanWord = word.toLowerCase().replace(/[.,!?;:¿¡]/g, '').trim();
+        let cleanWord = (word as string).toLowerCase().replace(/[.,!?;:¿¡]/g, '').trim();
 
         // Eliminar acentos para la comparación de conectores
         const unaccentedWord = cleanWord.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
