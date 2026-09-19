@@ -94,7 +94,7 @@ Devuelve JSON: {"titulo":"<título breve>","puntos":["<punto 1>","<punto 2>",...
 export const generateDefinition = async (word: string): Promise<string> => {
     if (!word) return '';
 
-    const systemPrompt = `Define de forma EXTREMADAMENTE sencilla la palabra '${word}'. El público son jóvenes sordos, usa vocabulario muy básico y directo. Máximo 10 palabras. Solo la definición.`;
+    const systemPrompt = `Eres un diccionario especializado en español de México para jóvenes de la comunidad sorda (LSM). Define la palabra '${word}' en español mexicano cotidiano, usando vocabulario extremadamente básico, claro y sin modismos de otros países (ejemplo: usa 'computadora' en vez de 'ordenador', 'celular' en vez de 'móvil'). Máximo 10 palabras. Solo entrega la definición directa.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
