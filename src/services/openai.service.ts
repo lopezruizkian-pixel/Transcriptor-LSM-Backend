@@ -90,3 +90,34 @@ Devuelve JSON: {"titulo":"<título breve>","puntos":["<punto 1>","<punto 2>",...
     // Devolvemos el JSON como string (se guardará así en Prisma y se parseará en el frontend)
     return data.choices[0].message.content;
 };
+
+export const generateDefinition = async (word: string): Promise<string> => {
+    if (!word) return '';
+
+    const systemPrompt = `Define de forma EXTREMADAMENTE sencilla la palabra '${word}'. El público son jóvenes sordos, usa vocabulario muy básico y directo. Máximo 10 palabras. Solo la definición.`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: "system", content: systemPrompt }
+            ],
+            temperature: 0,
+            max_tokens: 80
+        })
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error("OpenAI Dictionary Error:", error);
+        throw new Error(error.error?.message || `Error HTTP ${response.status} en la API de OpenAI (Diccionario)`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content.trim();
+};

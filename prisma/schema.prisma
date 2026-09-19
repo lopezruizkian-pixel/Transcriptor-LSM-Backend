@@ -16,3 +16,11 @@ model ClassSession {
   summary             String   @db.Text
   createdAt           DateTime @default(now())
 }
+
+model Dictionary {
+  id          Int      @id @default(autoincrement())
+  word        String   @unique
+  definition  String
+  searchCount Int      @default(1)
+  createdAt   DateTime @default(now())
+}

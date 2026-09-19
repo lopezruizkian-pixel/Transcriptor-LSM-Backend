@@ -5,6 +5,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import transcriptionRoutes from './routes/transcription.routes.js';
 import classRoutes from './routes/class.routes.js';
+import dictionaryRoutes from './routes/dictionary.route.js';
 import setupSockets from './sockets/class.socket.js';
 
 dotenv.config();
@@ -31,6 +32,7 @@ setupSockets(io);
 // Rutas API
 app.use('/api', transcriptionRoutes);
 app.use('/api/class', classRoutes);
+app.use('/api/dictionary', dictionaryRoutes);
 
 // Ruta de salud / estado
 app.get('/health', (req: Request, res: Response) => {
