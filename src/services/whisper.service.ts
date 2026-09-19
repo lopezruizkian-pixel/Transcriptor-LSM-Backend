@@ -1,5 +1,5 @@
-// Frases de alucinación de subtítulos de YouTube/Amara
-const WHISPER_HALLUCINATIONS = [
+// Frases de alucinación conocidas de Whisper
+const WHISPER_HALLUCINATIONS: string[] = [
     'suscríbete', 'suscribete', 'subscribe', 'amara.org', 'amara',
     'gracias por ver', 'thanks for watching', 'like y suscríbete',
     'comparte el video', 'share the video', 'subtítulos por', 'subtitulos por',
@@ -14,48 +14,45 @@ const isHallucination = (text: string): boolean => {
     return WHISPER_HALLUCINATIONS.some(phrase => lower.includes(phrase));
 };
 
-export const transcribeAudio = async (audioBase64: string, language?: string, ext?: string, topicContext?: string): Promise<any> => {
+export const transcribeAudio = async (
+    audioBase64: string,
+    language: string,
+    ext: string,
+    topicContext?: string
+): Promise<any> => {
     if (!audioBase64) throw new Error('No audio provided');
+    if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY no configurada');
 
     const fileExt = ext || 'webm';
     const buffer = Buffer.from(audioBase64, 'base64');
     const blob = new Blob([buffer], { type: `audio/${fileExt}` });
 
-    const formData = new FormData();
-    formData.append('file', blob, `grabacion.${fileExt}`);
+    const fd = new FormData();
+    fd.append('file', blob, `grabacion.${fileExt}`);
+    fd.append('model', 'whisper-1');
+    fd.append('language', language || 'es');
+    if (topicContext) fd.append('prompt', `Vocabulario clave: ${topicContext}`);
 
-    const useGroq = Boolean(process.env.GROQ_API_KEY);
-    const apiUrl = useGroq
-        ? 'https://api.groq.com/openai/v1/audio/transcriptions'
-        : 'https://api.openai.com/v1/audio/transcriptions';
-    const apiKey = useGroq ? process.env.GROQ_API_KEY : process.env.OPENAI_API_KEY;
-    const model = useGroq ? 'whisper-large-v3-turbo' : 'whisper-1';
+    console.log('🎙️ Enviando audio a OpenAI Whisper...');
 
-    formData.append('model', model);
-    formData.append('language', language || 'es');
-    
-    if (topicContext) {
-        formData.append('prompt', `Vocabulario clave: ${topicContext}`);
-    }
-
-    const response = await fetch(apiUrl, {
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}` },
-        body: formData
+        headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
+        body: fd
     });
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.error?.message || `Error HTTP ${response.status} en la API de transcripción`);
+        throw new Error((error as any).error?.message || `Error HTTP ${response.status} en OpenAI Whisper`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as { text?: string };
 
-    // Filtrar alucinaciones antes de retornar
     if (data.text && isHallucination(data.text)) {
-        console.warn(`⚠️  Alucinación de Whisper filtrada: "${data.text}"`);
+        console.warn(`⚠️ Alucinación de Whisper filtrada: "${data.text}"`);
         return { ...data, text: '' };
     }
 
+    console.log(`✅ Whisper OK: "${(data.text || '').slice(0, 60)}..."`);
     return data;
 };

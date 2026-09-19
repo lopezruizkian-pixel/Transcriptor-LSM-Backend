@@ -50,15 +50,15 @@ export const endClass = async (req: Request, res: Response): Promise<any> => {
 
         // Generar resumen
         console.log(`Generando resumen para la clase ${classId}...`);
-        const summary = await generateSummary(sessionData.fullTranscription, sessionData.topicContext);
+        const summary = await generateSummary(sessionData.fullTranscription ?? '', sessionData.topicContext ?? '');
 
         // Guardar en Prisma
         const classSession = await prisma.classSession.create({
             data: {
                 classId: classId,
-                topicContext: sessionData.topicContext,
+                topicContext: sessionData.topicContext ?? '',
                 fullTranscription: sessionData.fullTranscription,
-                fullLsm: sessionData.fullLsm,
+                fullLsm: sessionData.fullLsm ?? '',
                 summary: summary
             }
         });
