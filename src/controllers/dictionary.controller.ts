@@ -67,8 +67,34 @@ export const getDefinition = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
-        // If not cached, call OpenAI
-        const definition = await generateDefinition(cleanWord);
+        let definition = '';
+        let source = 'openai'; // Por defecto, asumimos que usará OpenAI
+
+        try {
+            // 1. Intentar primero con la API externa gratuita para ahorrar costos de OpenAI
+            const freeApiRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/es/${cleanWord}`);
+            if (freeApiRes.ok) {
+                const data = await freeApiRes.json();
+                const rawDef = data?.[0]?.meanings?.[0]?.definitions?.[0]?.definition;
+                
+                if (rawDef) {
+                    // Limpiamos y recortamos para mantener el estándar LSM de palabras cortas
+                    const firstSentence = rawDef.split('.')[0];
+                    const words = firstSentence.split(' ');
+                    definition = words.slice(0, 12).join(' ').trim();
+                    if (words.length > 12) definition += '...';
+                    source = 'free_api';
+                }
+            }
+        } catch (e) {
+            console.warn('Fallo en la API gratuita, procediendo al fallback con OpenAI');
+        }
+
+        // 2. Fallback a OpenAI si la API gratuita no encontró la palabra o falló
+        if (!definition) {
+            definition = await generateDefinition(cleanWord);
+            source = 'openai';
+        }
 
         // Save to cache with searchCount = 1 (default in prisma)
         const newEntry = await prisma.dictionary.create({
@@ -82,7 +108,8 @@ export const getDefinition = async (req: Request, res: Response): Promise<void> 
             word: newEntry.word,
             definition: newEntry.definition,
             searchCount: newEntry.searchCount,
-            cached: false
+            cached: false,
+            source: source
         });
     } catch (error: any) {
         console.error('Error fetching definition:', error);
